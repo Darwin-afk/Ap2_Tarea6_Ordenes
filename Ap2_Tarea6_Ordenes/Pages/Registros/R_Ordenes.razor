@@ -1,0 +1,296 @@
+﻿@page "/Ordenes"
+@page "/Ordenes/{OrdenId:int}"
+
+@using Models
+@using BLL
+
+@inject IToastService toast
+
+<EditForm Model="Orden" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator/>
+    <div class="card">
+        <div class="card-header">
+            <h3>Registro de Ordenes</h3>
+        </div>
+
+        <div class="card-body">
+            <form>
+                @*OrdenId*@
+                <div class="form-row align-items-center">
+                    <div class="col">
+                        <div class="form-group">
+                            <label>OrdenId</label>
+                            <div class="input-group">
+                                <InputNumber @bind-Value="Orden.OrdenId" class="form-control col-4"/>
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-primary input-group-text" @onclick="Buscar"><i class="oi oi-magnifying-glass"/>Buscar</button>
+                                </div>
+                            </div>
+                            <ValidationMessage For="@(() => Orden.OrdenId)"/>
+                        </div>
+                    </div>
+                </div>
+
+                @*Fecha*@
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <InputDate @bind-Value="Orden.Fecha" class="form-control"/>
+                    <ValidationMessage For="@(() => Orden.Fecha)"/>
+                </div>
+
+                @*SuplidorId*@
+                <div class="form-group">
+                    <label>Suplidor</label>
+                    <InputSelect @bind-Value="SuplidorSeleccionado" class="form-control">
+                        @foreach(var suplidor in Suplidores)
+                        {
+                            <option value="@Convert.ToString(suplidor.SuplidorId)">@suplidor.Nombres</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                @*Monto*@
+                <div class="form-group">
+                    <label>Monto</label>
+                    <InputNumber readonly @bind-Value="Orden.Monto" class="form-control"/>
+                </div>
+
+                @*Productos*@
+                <div class="form-group">
+                    <label>-Agregar Productos-</label>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-4">
+                        <label>Producto</label>
+                        <InputSelect @bind-Value="ProductoSeleccionado" class="form-control">
+                            @foreach (var producto in Productos)
+                            {
+                                <option value="@Convert.ToString(producto.ProductoId)">@producto.Descripcion</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="form-group col-4">
+                        <label>Cantidad</label>
+                        <div class="input-group">
+                            <InputNumber @bind-Value="Cantidad" class="form-control" />
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-primary input-group-text" @onclick="AgregarProducto"><i class="oi oi-plus" /> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" id="tabla">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th>Cantidad</th>
+                                <th>Costo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for(int i = 0; i < Orden.OrdenDetalle.Count; i++)
+                            {
+                                int index = i;
+                            <tr>
+                                <td>@(ObtenerDescripcion(Orden.OrdenDetalle[i].ProductoId))</td>
+                                <td>@Orden.OrdenDetalle[i].Cantidad</td>
+                                <td>@Orden.OrdenDetalle[i].Costo</td>
+                                <td><button type="button" class="btn btn-lg btn-danger" @onclick="@((args) => RemoverFila(index))"><i class="oi oi-minus"/> Remover</button></td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-footer">
+            <div class="form-group text-center" display: inline-block>
+                <button type="button" class="btn btn-lg btn-primary" @onclick="Nuevo"><i class="oi oi-file" /> Nuevo</button>
+                <button type="submit" class="btn btn-lg btn-success"><i class="oi oi-hard-drive" /> Guardar</button>
+                <button type="button" class="btn btn-lg btn-danger" @onclick="Eliminar"><i class="oi oi-trash" /> Eliminar</button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int OrdenId { get; set; }
+
+    public Ordenes Orden { get; set; }
+
+    public List<Suplidores> Suplidores { get; set; }
+
+    public List<Productos> Productos { get; set; }
+
+    public string SuplidorSeleccionado { get; set; } = "0";
+
+    public string ProductoSeleccionado { get; set; } = "0";
+
+    public int Cantidad { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        Nuevo();
+        BuscarParametro();
+    }
+
+    private void Nuevo()
+    {
+        Orden = new Ordenes();
+        Suplidores = SuplidoresBLL.GetList(s => true);
+        Productos = ProductosBLL.GetList(p => true);
+
+        if (Suplidores.Count > 0)
+            SuplidorSeleccionado = Convert.ToString(Suplidores.First().SuplidorId);
+
+        if (Productos.Count > 0)
+            ProductoSeleccionado = Convert.ToString(Productos.First().ProductoId);
+
+    }
+
+    private void BuscarParametro()
+    {
+        if(OrdenId > 0)
+        {
+            var encontrado = OrdenesBLL.Buscar(OrdenId);
+
+            if (encontrado != null)
+            {
+                this.Orden = encontrado;
+                AsignarSuplidor();
+            }
+            else
+                toast.ShowWarning("No encontrado");
+        }
+    }
+
+    public void Buscar()
+    {
+        if (Orden.OrdenId > 0)
+        {
+            var encontrado = OrdenesBLL.Buscar(Orden.OrdenId);
+
+            if (encontrado != null)
+            {
+                this.Orden = encontrado;
+                AsignarSuplidor();
+            }
+            else
+                toast.ShowWarning("No encontrado");
+        }
+    }
+
+    private void AsignarSuplidor()
+    {
+        Suplidores.Clear();
+        var suplidor = SuplidoresBLL.Buscar(Orden.SuplidorId);
+        Suplidores.Add(suplidor);
+        SuplidorSeleccionado = Convert.ToString(suplidor.SuplidorId);
+    }
+
+    public void AgregarProducto()
+    {
+        int productoId = Convert.ToInt32(ProductoSeleccionado);
+
+        if (productoId <= 0 || Cantidad <= 0)
+            return;
+
+        if(!ProductosBLL.InventarioDisponible(productoId,Cantidad))
+        {
+            toast.ShowInfo("Cantidad en el inventario insuficiente");
+            return;
+        }
+
+        Orden.OrdenDetalle.Add(new OrdenesDetalle
+        {
+            Id = 0,
+            OrdenId = Orden.OrdenId,
+            ProductoId = productoId,
+            Cantidad = Cantidad,
+            Costo = ObtenerCosto(productoId)
+        });
+
+        Orden.Monto += Orden.OrdenDetalle.Last().Cantidad * Orden.OrdenDetalle.Last().Costo;
+
+        Cantidad = 0;
+    }
+
+    private decimal ObtenerCosto(int id)
+    {
+        foreach(var item in Productos)
+        {
+            if (item.ProductoId == id)
+                return item.Costo;
+        }
+
+        return 0;
+    }
+
+    public string ObtenerDescripcion(int id)
+    {
+        foreach (var item in Productos)
+        {
+            if (item.ProductoId == id)
+                return item.Descripcion;
+        }
+
+        return "";
+    }
+
+    public void RemoverFila(int index)
+    {
+        ProductosBLL.DevolverInventario(Orden.OrdenDetalle[index].ProductoId, Orden.OrdenDetalle[index].Cantidad);
+
+        Orden.OrdenDetalle.RemoveAt(index);
+    }
+
+    public void Guardar()
+    {
+        bool guardo = false;
+
+        if (SuplidorSeleccionado == "0")
+        {
+            toast.ShowInfo("Debe seleccionar a una persona");
+            return;
+        }
+
+        if(Orden.OrdenDetalle.Count <= 0)
+        {
+            toast.ShowInfo("Debe agregar algun producto");
+            return;
+        }
+
+        Orden.SuplidorId = Convert.ToInt32(SuplidorSeleccionado);
+
+        guardo = OrdenesBLL.Guardar(Orden);
+
+        if (guardo)
+        {
+            Nuevo();
+            toast.ShowSuccess("Guardado correctamente");
+        }
+        else
+            toast.ShowError("No fue posible guardar");
+    }
+
+    public void Eliminar()
+    {
+        bool elimino;
+
+        elimino = OrdenesBLL.Eliminar(Orden.OrdenId);
+
+        if (elimino)
+        {
+            Nuevo();
+            toast.ShowSuccess("Eliminado correctamente");
+        }
+        else
+            toast.ShowError("No fue posible eliminar");
+    }
+
+}
