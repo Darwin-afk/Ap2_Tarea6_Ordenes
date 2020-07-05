@@ -87,6 +87,7 @@
                                 <th>Descripción</th>
                                 <th>Cantidad</th>
                                 <th>Costo</th>
+                                <th>Importe</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,6 +98,7 @@
                                 <td>@(ObtenerDescripcion(Orden.OrdenDetalle[i].ProductoId))</td>
                                 <td>@Orden.OrdenDetalle[i].Cantidad</td>
                                 <td>@Orden.OrdenDetalle[i].Costo</td>
+                                <td>@(Orden.OrdenDetalle[i].Cantidad * Orden.OrdenDetalle[i].Costo)</td>
                                 <td><button type="button" class="btn btn-lg btn-danger" @onclick="@((args) => RemoverFila(index))"><i class="oi oi-minus"/> Remover</button></td>
                             </tr>
                             }
